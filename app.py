@@ -48,21 +48,23 @@ def check_guess(guess, secret):
 
 
 def update_score(current_score: int, outcome: str, attempt_number: int):
-    if outcome == "Win":
-        points = 100 - 10 * (attempt_number + 1)
-        if points < 10:
-            points = 10
-        return current_score + points
+	# Updated to compute result then clamp to 0 so score never goes negative.
+	if outcome == "Win":
+		points = 100 - 10 * (attempt_number + 1)
+		if points < 10:
+			points = 10
+		result = current_score + points
+	elif outcome == "Too High":
+		if attempt_number % 2 == 0:
+			result = current_score + 5
+		else:
+			result = current_score - 5
+	elif outcome == "Too Low":
+		result = current_score - 5
+	else:
+		result = current_score
 
-    if outcome == "Too High":
-        if attempt_number % 2 == 0:
-            return current_score + 5
-        return current_score - 5
-
-    if outcome == "Too Low":
-        return current_score - 5
-
-    return current_score
+	return max(0, result)
 
 st.set_page_config(page_title="Glitchy Guesser", page_icon="🎮")
 
@@ -132,10 +134,14 @@ with col3:
     show_hint = st.checkbox("Show hint", value=True)
 
 if new_game:
-    st.session_state.attempts = 0
-    st.session_state.secret = random.randint(1, 100)
-    st.success("New game started.")
-    st.rerun()
+	# Reset all relevant game state so score doesn't persist or go negative.
+	st.session_state.attempts = 1
+	st.session_state.secret = random.randint(low, high)
+	st.session_state.score = 0
+	st.session_state.status = "playing"
+	st.session_state.history = []
+	st.success("New game started.")
+	st.rerun()
 
 if st.session_state.status != "playing":
     if st.session_state.status == "won":
